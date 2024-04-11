@@ -33,7 +33,7 @@ io.on('connection', (socket) => {
         const userColor = userColors[userId];
         const userName = userNames[userId] || 'Unknown'; 
         
-        console.log(`User ${userName} (${userId}) sent message: ${msg}`);
+        //console.log(`User ${userName} (${userId}) sent message: ${msg}`);
         
         io.emit('chat message', { name: userName, message: msg, color: userColor });
     });
