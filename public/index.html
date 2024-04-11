@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body {
+            background-color: #151515;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #messages {
+            list-style-type: none;
+            padding: 10px;
+            margin: 0;
+            overflow-y: auto;
+            background-color: #202020;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            height: 70vh;
+        }
+
+        #form {
+            display: flex;
+            align-items: center;
+            width: 80%;
+            margin-top: 10px;
+        }
+
+        .search-bar {
+            flex: 1;
+            height: 35px;
+            border-radius: 5px;
+            outline: none;
+            border: 1px solid #ccc;
+            color: aliceblue;
+            padding: 5px 10px;
+            background-color: #181818;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-bar::placeholder {
+            color: #999;
+        }
+
+        .search-bar:focus {
+            border-color: #4cc2ff;
+        }
+
+        .button-84 {
+            height: 45px;
+            width: 60px;
+            margin-left: 10px;
+            background-color: #4cc2ff;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .button-84:hover {
+            background-color: #3296d8;
+        }
+
+        .button-84:focus {
+            outline: none;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            background-color: #151515;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 12px;
+            background-color: #151515;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            border-radius: 10px;
+            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
+            background-color: #2a2a2a;
+        }
+        #nameForm{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgb(255, 255, 255);
+            text-align: center;
+            /* background-color: rgba(0, 0, 0, 0.5); */
+        }
+        *,
+        *::after,
+        *::before {
+        margin: 0;
+        padding: 0;
+        box-sizing: inherit;
+        font-size: 62,5%;
+        }
+
+        /* body {
+        height: 100vh;
+        width: 100%;
+        background: #0f2027; /* fallback for old browsers
+        background: linear-gradient(to right,#2c5364, #203a43, #0f2027);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: #fff;
+        } */
+
+        .form__label {
+        font-family: 'Roboto', sans-serif;
+        font-size: 1.2rem;
+        margin-left: 2rem;
+        margin-top: 0.7rem;
+        display: block;
+        transition: all 0.3s;
+        transform: translateY(0rem);
+        }
+
+        .form__input {
+        font-family: 'Roboto', sans-serif;
+        
+        /* display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh; */
+
+        color: #333;
+        font-size: 1.2rem;
+        margin: 0 auto;
+        margin-top: 20px;
+        padding: 1.5rem 2rem;
+        border-radius: 0.2rem;
+        background-color: rgb(255, 255, 255);
+        border: none;
+        height: 20px;
+        width: 200px;
+        display: block;
+        border-bottom: 0.3rem solid transparent;
+        transition: all 0.3s;
+        }
+
+        .form__input:placeholder-shown + .form__label {
+        opacity: 0;
+        visibility: hidden;
+        -webkit-transform: translateY(-4rem);
+        transform: translateY(-4rem);
+        }
+
+
+        /*button*/
+
+        .button-27 {
+        appearance: none;
+        background-color: #ffffff;
+        border: 2px solid #1A1A1A;
+        border-radius: 15px;
+        box-sizing: border-box;
+        color: #000000;
+        cursor: pointer;
+        display: inline-block;
+        font-family: Roobert,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+        font-size: 16px;
+        font-weight: 600;
+        line-height: normal;
+        margin: 0;
+        min-height: 60px;
+        min-width: 0;
+        outline: none;
+        padding: 16px 24px;
+        text-align: center;
+        text-decoration: none;
+        transition: all 300ms cubic-bezier(.23, 1, 0.32, 1);
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        width: 100px;
+        will-change: transform;
+        }
+
+        .button-27:disabled {
+        pointer-events: none;
+        }
+
+        .button-27:hover {
+        box-shadow: rgba(0, 0, 0, 0.25) 0 8px 15px;
+        transform: translateY(-2px);
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="nameForm" class="form__group field">
+<<<<<<< HEAD
+=======
+        <h1>Welcome to ChatApp</h1>
+>>>>>>> 7e8dcac2c5ba2b43c39e710fbee5f9be2d95440d
+        <p style="margin-top: 1%;">Please Enter Your Name To Continue</p>
+        <input type="text" class="form__input" id="nameInput" placeholder="Enter Full name" required/>
+        <label for="name" class="form__label">Enter Full Name</label>
+        <button class="button-27" role="button" onclick="submitName()">Submit</button>
+
+        <!-- <h1 style="color: lightblue;">Username Form</h1> -->
+        <!-- <input type="text" id="nameInput" placeholder="Enter your name" /> -->
+        <!-- <button onclick="submitName()">Submit</button> -->
+    </div>
+    <h3 style="color: white; border-bottom: 2px white solid;">Welcome to ChatApp</h3>
+    <div id="chatApp" style="display: none"></div>
+    <ul id="messages" class="messages"></ul>
+    <form id="form" action="">
+        <input id="input" class="search-bar" autocomplete="off" placeholder="Type your message..." />
+        <button type="submit" class="button-84">Send</button>
+    </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let userName = "";
+
+        function submitName() {
+            const nameInput = document.getElementById("nameInput");
+            userName = nameInput.value.trim();
+
+            if (userName) {
+                document.getElementById("nameForm").style.display = "none";
+                document.getElementById("chatApp").style.display = "block";
+                // console.log("User name set:", userName);
+                socket.emit("set name", userName);
+                setupMessageForm();
+            }
+        }
+        function setupMessageForm() {
+            const form = document.getElementById("form");
+            const input = document.getElementById("input");
+
+            form.addEventListener("submit", (e) => {
+                e.preventDefault();
+                if (input.value) {
+                    console.log("Sending message:", input.value);
+                    socket.emit("chat message", input.value);
+                    input.value = "";
+                }
+            });
+        }
+        let userColor;
+        let userNameColor;
+
+        socket.on('color', (color) => {
+            userColor = color;
+            const match = userColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (match) {
+                let r = parseInt(match[1]);
+                let g = parseInt(match[2]);
+                let b = parseInt(match[3]);
+                c = 50;
+                if ((r < c && b < c) || (r < c && g < c) || (b < c && g < c)) {
+                    r = r * 2;
+                    g = g * 2;
+                    b = b * 2;
+                }
+                else {
+                    r = r / 1.5;
+                    g = g / 1.5;
+                    b = b / 1.5;
+                }
+                userNameColor = 'rgb(' + r + ',' + g + ',' + b + ')'
+            }
+        });
+
+        window.addEventListener('load', () => {
+            input.focus();
+        });
+
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messages = document.getElementById('messages');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value) {
+                socket.emit('chat message', input.value);
+                input.value = '';
+            }
+        });
+
+        socket.on('chat message', (data) => {
+            const item = document.createElement('li');
+            item.style.color = data.color || userColor;
+            item.innerHTML = `<strong> ${data.name} </strong> : ${data.message}`;
+            messages.appendChild(item);
+            messages.scrollTop = messages.scrollHeight;
+
+            // setTimeout(() => {
+            //     item.remove();
+            // }, 10000);
+
+        });
+    </script>
+</body>
+
+</html>
