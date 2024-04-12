@@ -11,21 +11,21 @@ const userColors = {};
 const userNames = {};
 
 io.on('connection', (socket) => {
-    // console.log(`User connected: ${socket.id}`);
+    console.log(`User connected: ${socket.id}`);
 
     const color = getRandomColor();
     userColors[socket.id] = color;
     socket.emit('color', color);
 
     socket.on('disconnect', () => {
-        // console.log(`User disconnected: ${socket.id}`);
+        console.log(`User disconnected: ${socket.id}`);
         delete userColors[socket.id];
         delete userNames[socket.id];
     });
 
     socket.on('set name', (name) => {
         userNames[socket.id] = name;
-        // console.log(`User ${socket.id} set name: ${name}`);
+        console.log(`User ${socket.id} set name: ${name}`);
     });
 
     socket.on('chat message', (msg) => {
