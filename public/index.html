@@ -4,311 +4,670 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
+    <title>Chat App - Live & Share Code</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --bg-dark: #0f0f23;
+            --bg-darker: #09091a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0c0;
+            --shadow-glow: 0 8px 32px rgba(102, 126, 234, 0.15);
+            --input-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        *,
+        *::after,
+        *::before {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #151515;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            background: var(--bg-dark);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text-primary);
             height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
+            overflow: hidden;
+            position: relative;
         }
 
-        #messages {
-            list-style-type: none;
-            padding: 10px;
-            margin: 0;
-            overflow-y: auto;
-            background-color: #202020;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            height: 70vh;
-        }
-
-        #form {
-            display: flex;
-            align-items: center;
-            width: 80%;
-            margin-top: 10px;
-        }
-
-        .search-bar {
-            flex: 1;
-            height: 35px;
-            border-radius: 5px;
-            outline: none;
-            border: 1px solid #ccc;
-            color: aliceblue;
-            padding: 5px 10px;
-            background-color: #181818;
-            transition: border-color 0.3s ease;
-        }
-
-        .search-bar::placeholder {
-            color: #999;
-        }
-
-        .search-bar:focus {
-            border-color: #4cc2ff;
-        }
-
-        .button-84 {
-            height: 45px;
-            width: 60px;
-            margin-left: 10px;
-            background-color: #4cc2ff;
-            border: none;
-            border-radius: 5px;
-            color: #fff;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .button-84:hover {
-            background-color: #3296d8;
-        }
-
-        .button-84:focus {
-            outline: none;
-        }
-
-        .messages::-webkit-scrollbar-track {
-            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            background-color: #151515;
-        }
-
-        .messages::-webkit-scrollbar {
-            width: 12px;
-            background-color: #151515;
-        }
-
-        .messages::-webkit-scrollbar-thumb {
-            border-radius: 10px;
-            -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
-            background-color: #2a2a2a;
-        }
-        #nameForm{
+        /* Animated background gradient */
+        body::before {
+            content: '';
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgb(255, 255, 255);
-            text-align: center;
-            /* background-color: rgba(0, 0, 0, 0.5); */
-        }
-        *,
-        *::after,
-        *::before {
-        margin: 0;
-        padding: 0;
-        box-sizing: inherit;
-        font-size: 62,5%;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(245, 87, 108, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(0, 242, 254, 0.08) 0%, transparent 50%);
+            animation: backgroundPulse 15s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
         }
 
-        /* body {
-        height: 100vh;
-        width: 100%;
-        background: #0f2027; /* fallback for old browsers
-        background: linear-gradient(to right,#2c5364, #203a43, #0f2027);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        color: #fff;
-        } */
+        @keyframes backgroundPulse {
 
-        .form__label {
-        font-family: 'Roboto', sans-serif;
-        font-size: 1.2rem;
-        margin-left: 2rem;
-        margin-top: 0.7rem;
-        display: block;
-        transition: all 0.3s;
-        transform: translateY(0rem);
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        /* Name Form Modal */
+        #nameForm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        #nameForm::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
+            animation: formGradientMove 8s ease-in-out infinite;
+        }
+
+        @keyframes formGradientMove {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(20px, 20px);
+            }
+        }
+
+        #nameForm h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
+        #nameForm p {
+            font-size: 1.2rem;
+            margin-bottom: 2.5rem;
+            opacity: 0.95;
+            z-index: 1;
         }
 
         .form__input {
-        font-family: 'Roboto', sans-serif;
-        
-        /* display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh; */
-
-        color: #333;
-        font-size: 1.2rem;
-        margin: 0 auto;
-        margin-top: 20px;
-        padding: 1.5rem 2rem;
-        border-radius: 0.2rem;
-        background-color: rgb(255, 255, 255);
-        border: none;
-        height: 20px;
-        width: 200px;
-        display: block;
-        border-bottom: 0.3rem solid transparent;
-        transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 16px;
+            padding: 1.2rem 1.8rem;
+            font-size: 1.1rem;
+            font-family: 'Inter', sans-serif;
+            width: 350px;
+            margin-bottom: 1.8rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            z-index: 1;
         }
 
-        .form__input:placeholder-shown + .form__label {
-        opacity: 0;
-        visibility: hidden;
-        -webkit-transform: translateY(-4rem);
-        transform: translateY(-4rem);
+        .form__input:focus {
+            outline: none;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
         }
-
-
-        /*button*/
 
         .button-27 {
-        appearance: none;
-        background-color: #ffffff;
-        border: 2px solid #1A1A1A;
-        border-radius: 15px;
-        box-sizing: border-box;
-        color: #000000;
-        cursor: pointer;
-        display: inline-block;
-        font-family: Roobert,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-        font-size: 16px;
-        font-weight: 600;
-        line-height: normal;
-        margin: 0;
-        min-height: 60px;
-        min-width: 0;
-        outline: none;
-        padding: 16px 24px;
-        text-align: center;
-        text-decoration: none;
-        transition: all 300ms cubic-bezier(.23, 1, 0.32, 1);
-        user-select: none;
-        -webkit-user-select: none;
-        touch-action: manipulation;
-        width: 100px;
-        will-change: transform;
-        }
-
-        .button-27:disabled {
-        pointer-events: none;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            border: none;
+            border-radius: 16px;
+            padding: 1.2rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            z-index: 1;
         }
 
         .button-27:hover {
-        box-shadow: rgba(0, 0, 0, 0.25) 0 8px 15px;
-        transform: translateY(-2px);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
         }
 
+        /* Main Chat Container */
+        #chatContainer {
+            display: flex;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Chat Area */
+        #chatArea {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Header */
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 2.5rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            opacity: 0.05;
+            pointer-events: none;
+        }
+
+        .chat-header h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .clear-btn {
+            background: rgba(245, 87, 108, 0.1);
+            border: 1px solid rgba(245, 87, 108, 0.3);
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            color: #f5576c;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .clear-btn:hover {
+            background: rgba(245, 87, 108, 0.2);
+            border-color: #f5576c;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 87, 108, 0.3);
+        }
+
+        /* Messages Container */
+        #messages {
+            flex: 1;
+            list-style: none;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+
+        #messages::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #messages::-webkit-scrollbar-thumb {
+            background: var(--primary-gradient);
+            border-radius: 10px;
+        }
+
+        #messages:empty::before {
+            content: 'No messages yet. Start the conversation! 💬';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        #messages li {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            max-width: 75%;
+            word-wrap: break-word;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            animation: messageSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        #messages li::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            border-radius: 16px 0 0 16px;
+        }
+
+        #messages li strong {
+            font-weight: 700;
+            margin-right: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        #messages li.code-message {
+            max-width: 90%;
+            background: rgba(15, 15, 35, 0.7);
+        }
+
+        #messages li pre {
+            margin: 0.75rem 0 0 0;
+            border-radius: 12px;
+            overflow-x: auto;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+        }
+
+        #messages li code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Input Form */
+        #form {
+            display: flex;
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow-glow);
+            position: relative;
+        }
+
+        #form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            opacity: 0.03;
+            pointer-events: none;
+            border-radius: 20px;
+        }
+
+        #input {
+            flex: 1;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            resize: none;
+            min-height: 52px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        #input:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #input.code-mode {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+
+        #input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .code-toggle-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 1rem 1.75rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .code-toggle-btn:hover {
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .code-toggle-btn.active {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn {
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 14px;
+            padding: 1rem 2.5rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(79, 172, 254, 0.3);
+            white-space: nowrap;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(79, 172, 254, 0.5);
+        }
+
+        .send-btn:active {
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 
 <body>
-    <div id="nameForm" class="form__group field">
+    <!-- Name Form -->
+    <div id="nameForm">
         <h1>Welcome to ChatApp</h1>
-        <p style="margin-top: 1%;">Please Enter Your Name To Continue</p>
-        <input type="text" class="form__input" id="nameInput" placeholder="Enter Full name" required/>
-        <label for="name" class="form__label">Enter Full Name</label>
-        <button class="button-27" role="button" onclick="submitName()">Submit</button>
-
-        <!-- <h1 style="color: lightblue;">Username Form</h1> -->
-        <!-- <input type="text" id="nameInput" placeholder="Enter your name" /> -->
-        <!-- <button onclick="submitName()">Submit</button> -->
+        <p>Please Enter Your Name To Continue</p>
+        <input type="text" class="form__input" id="nameInput" placeholder="Enter your name" required />
+        <button class="button-27" role="button" onclick="submitName()">Let's Chat</button>
     </div>
-    <h3 style="color: white; border-bottom: 2px white solid;">Welcome to ChatApp</h3>
-    <div id="chatApp" style="display: none"></div>
-    <ul id="messages" class="messages"></ul>
-    <form id="form" action="">
-        <input id="input" class="search-bar" autocomplete="off" placeholder="Type your message..." />
-        <button type="submit" class="button-84">Send</button>
-    </form>
+
+    <!-- Main Chat Container -->
+    <div id="chatContainer" style="display: none;">
+        <div id="chatArea">
+            <!-- Header -->
+            <div class="chat-header">
+                <h3>💬 ChatApp Live</h3>
+                <button class="clear-btn" onclick="clearChat()">🗑️ Clear</button>
+            </div>
+
+            <!-- Messages -->
+            <ul id="messages"></ul>
+
+            <!-- Input Form -->
+            <form id="form" action="">
+                <textarea id="input" autocomplete="off" placeholder="Type your message..." rows="1"></textarea>
+                <button type="button" class="code-toggle-btn" id="codeModeBtn" onclick="toggleCodeMode()">
+                    📝 Code
+                </button>
+                <button type="submit" class="send-btn">Send</button>
+            </form>
+        </div>
+
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script>
         const socket = io();
         let userName = "";
+        let userColor;
+        let codeModeEnabled = false;
 
+        // Check localStorage for saved username on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedName = localStorage.getItem('chatAppUsername');
+            if (savedName) {
+                userName = savedName;
+                document.getElementById("nameForm").style.display = "none";
+                document.getElementById("chatContainer").style.display = "flex";
+                socket.emit("set name", userName);
+            }
+        });
+
+        // Name submission
         function submitName() {
             const nameInput = document.getElementById("nameInput");
             userName = nameInput.value.trim();
 
             if (userName) {
+                // Save to localStorage
+                localStorage.setItem('chatAppUsername', userName);
+
                 document.getElementById("nameForm").style.display = "none";
-                document.getElementById("chatApp").style.display = "block";
-                // console.log("User name set:", userName);
+                document.getElementById("chatContainer").style.display = "flex";
                 socket.emit("set name", userName);
-                setupMessageForm();
             }
         }
-        function setupMessageForm() {
-            const form = document.getElementById("form");
-            const input = document.getElementById("input");
 
-            form.addEventListener("submit", (e) => {
-                e.preventDefault();
-                if (input.value) {
-                    console.log("Sending message:", input.value);
-                    socket.emit("chat message", input.value);
-                    input.value = "";
-                }
-            });
+        // Clear chat and reset user
+        function clearChat() {
+            if (confirm('Clear all messages and reset username?')) {
+                // Clear messages
+                const messages = document.getElementById('messages');
+                messages.innerHTML = '';
+
+                // Clear localStorage
+                localStorage.removeItem('chatAppUsername');
+
+                // Reload page to show name form again
+                location.reload();
+            }
         }
-        let userColor;
-        let userNameColor;
 
+        // Handle Enter key in name input
+        document.getElementById("nameInput")?.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") submitName();
+        });
+
+        // Receive assigned color
         socket.on('color', (color) => {
             userColor = color;
-            const match = userColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-            if (match) {
-                let r = parseInt(match[1]);
-                let g = parseInt(match[2]);
-                let b = parseInt(match[3]);
-                c = 50;
-                if ((r < c && b < c) || (r < c && g < c) || (b < c && g < c)) {
-                    r = r * 2;
-                    g = g * 2;
-                    b = b * 2;
-                }
-                else {
-                    r = r / 1.5;
-                    g = g / 1.5;
-                    b = b / 1.5;
-                }
-                userNameColor = 'rgb(' + r + ',' + g + ',' + b + ')'
-            }
         });
 
-        window.addEventListener('load', () => {
-            input.focus();
-        });
-
+        // Message form
         const form = document.getElementById('form');
         const input = document.getElementById('input');
         const messages = document.getElementById('messages');
 
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (input.value) {
-                socket.emit('chat message', input.value);
-                input.value = '';
+        // Auto-resize textarea
+        function autoResize() {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+        }
+
+        input.addEventListener('input', autoResize);
+
+        // Handle Enter key: Shift+Enter for new line, Enter to send (unless code mode with multiple lines)
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit'));
             }
         });
 
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value.trim()) {
+                const message = input.value;
+                const payload = codeModeEnabled ? `\`\`\`\n${message}\n\`\`\`` : message;
+                socket.emit('chat message', payload);
+                input.value = '';
+                input.style.height = 'auto'; // Reset height after sending
+            }
+        });
+
+        // Receive messages
         socket.on('chat message', (data) => {
             const item = document.createElement('li');
-            item.style.color = data.color || userColor;
-            item.innerHTML = `<strong> ${data.name} </strong> : ${data.message}`;
+
+            // Check if it's a code message
+            const codeMatch = data.message.match(/^```\n?([\s\S]*?)\n?```$/);
+
+            if (codeMatch) {
+                item.classList.add('code-message');
+                const codeContent = codeMatch[1];
+                item.innerHTML = `<strong style="color: ${data.color}">${data.name}</strong> shared code:
+                    <pre><code class="language-javascript">${escapeHtml(codeContent)}</code></pre>`;
+                Prism.highlightAllUnder(item);
+            } else {
+                item.style.borderLeft = `4px solid ${data.color}`;
+                item.innerHTML = `<strong style="color: ${data.color}">${data.name}:</strong> ${escapeHtml(data.message)}`;
+            }
+
             messages.appendChild(item);
             messages.scrollTop = messages.scrollHeight;
 
-            // setTimeout(() => {
-            //     item.remove();
-            // }, 10000);
+            // Auto-remove after 60 seconds
+            setTimeout(() => item.remove(), 60000);
+        });
 
+        // Code mode toggle
+        function toggleCodeMode() {
+            codeModeEnabled = !codeModeEnabled;
+            const btn = document.getElementById('codeModeBtn');
+            btn.textContent = `Code Mode: ${codeModeEnabled ? 'ON' : 'OFF'}`;
+            btn.classList.toggle('active', codeModeEnabled);
+            input.classList.toggle('code-mode', codeModeEnabled);
+            input.placeholder = codeModeEnabled ? 'Type code to share... (Shift+Enter for new line)' : 'Type your message...';
+        }
+
+        // Editor toggle
+        function toggleEditor() {
+            const panel = document.getElementById('editorPanel');
+            const chatArea = document.getElementById('chatArea');
+            panel.classList.toggle('open');
+            chatArea.classList.toggle('editor-open');
+        }
+
+        // Live CSS editing
+        const customCSSTextarea = document.getElementById('customCSS');
+        const customHTMLTextarea = document.getElementById('customHTML');
+        let customStyleTag = document.createElement('style');
+        customStyleTag.id = 'custom-styles';
+        document.head.appendChild(customStyleTag);
+
+        customCSSTextarea.addEventListener('input', (e) => {
+            customStyleTag.textContent = e.target.value;
+        });
+
+        let customHTMLContainer = document.createElement('div');
+        customHTMLContainer.id = 'custom-html-container';
+        document.body.appendChild(customHTMLContainer);
+
+        customHTMLTextarea.addEventListener('input', (e) => {
+            customHTMLContainer.innerHTML = e.target.value;
+        });
+
+        // Utility function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Focus input when chat loads
+        window.addEventListener('load', () => {
+            if (document.getElementById("chatContainer").style.display !== "none") {
+                input.focus();
+            }
         });
     </script>
 </body>
