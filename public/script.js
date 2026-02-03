@@ -199,7 +199,9 @@ window.addEventListener('DOMContentLoaded', () => {
         // Generate Avatar
         const avatar = `<div class="user-avatar" style="width: 24px; height: 24px; font-size: 0.7rem; background: ${data.color || '#666'}; margin-right: 0.5rem; display: inline-flex;">${data.name.substring(0, 2).toUpperCase()}</div>`;
 
-        const renderedContent = marked.parse(data.message);
+        const dirtyHTML = marked.parse(data.message);
+        const renderedContent = DOMPurify.sanitize(dirtyHTML);
+
         const ephemeralBadge = data.ephemeral ? `<span style="font-size:0.7em; color:#f43f5e; margin-left:5px;">To ensure privacy, this message self-destructs... 🔥</span>` : '';
 
         div.innerHTML = `
