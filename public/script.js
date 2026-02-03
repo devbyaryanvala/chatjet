@@ -199,7 +199,28 @@ window.addEventListener('DOMContentLoaded', () => {
         // Generate Avatar
         const avatar = `<div class="user-avatar" style="width: 24px; height: 24px; font-size: 0.7rem; background: ${data.color || '#666'}; margin-right: 0.5rem; display: inline-flex;">${data.name.substring(0, 2).toUpperCase()}</div>`;
 
-        const renderedContent = marked.parse(data.message);
+        // Handle text content (Secure Escaping)
+        const textContent = data.text || data.message || '';
+        const safeText = textContent.replace(/</g, "&lt;");
+        let renderedContent = marked.parse(safeText);
+
+        // Append Attachment HTML if present
+        if (data.attachment) {
+            if (data.attachment.type.startsWith('image/')) {
+                renderedContent += `<img src="${data.attachment.data}" alt="${data.attachment.name}" style="max-width:100%; border-radius:8px; margin-top:0.5rem; display:block;">`;
+            } else {
+                renderedContent += `
+                 <div class="file-attachment-card">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(data.attachment.name)}</div>
+                        <div class="file-type">Attachment</div>
+                    </div>
+                    <a href="${data.attachment.data}" download="${data.attachment.name}" class="btn-download">Download</a>
+                 </div>`;
+            }
+        }
+
         const ephemeralBadge = data.ephemeral ? `<span style="font-size:0.7em; color:#f43f5e; margin-left:5px;">To ensure privacy, this message self-destructs... 🔥</span>` : '';
 
         div.innerHTML = `
@@ -218,6 +239,13 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('messages').appendChild(div);
+
+        // DOM Recycling: Limit to 100 messages
+        const container = document.getElementById('messages');
+        if (container.children.length > 100) {
+            container.removeChild(container.firstChild);
+        }
+
         if (!isRestoring) scrollToBottom();
     }
 
@@ -564,27 +592,11 @@ function sendMessage() {
         return;
     }
 
-    let finalMsg = text;
-
-    if (pendingAttachment) {
-        if (pendingAttachment.type.startsWith('image/')) {
-            finalMsg = (finalMsg + `\n![${pendingAttachment.name}](${pendingAttachment.data})`).trim();
-        } else {
-            // Use HTML for download card (Marked generally allows HTML)
-            const downloadCard = `
-             <div class="file-attachment-card">
-                <div class="file-icon">📄</div>
-                <div class="file-info">
-                    <div class="file-name">${escapeHtml(pendingAttachment.name)}</div>
-                    <div class="file-type">Attachment</div>
-                </div>
-                <a href="${pendingAttachment.data}" download="${pendingAttachment.name}" class="btn-download">Download</a>
-             </div>`;
-            finalMsg = (finalMsg + '\n' + downloadCard).trim();
-        }
-    }
-
-    socket.emit('chat message', finalMsg);
+    // Emit object payload
+    socket.emit('chat message', {
+        text: text,
+        attachment: pendingAttachment
+    });
 
     input.value = '';
     input.style.height = 'auto';
@@ -605,16 +617,16 @@ function handleSlashCommand(cmd) {
         case '/roll':
             const max = args[0] ? parseInt(args[0]) : 100;
             const roll = Math.floor(Math.random() * max) + 1;
-            socket.emit('chat message', `🎲 I rolled a **${roll}** (1-${max})`);
+            socket.emit('chat message', { text: `🎲 I rolled a **${roll}** (1-${max})` });
             break;
         case '/shrug':
-            socket.emit('chat message', `¯\\_(ツ)_/¯`);
+            socket.emit('chat message', { text: `¯\\_(ツ)_/¯` });
             break;
         case '/burn':
             // Send ephemeral message
             const secretMsg = args.join(' ');
             if (!secretMsg) return addSystemMessage('Usage: /burn <message>');
-            socket.emit('chat message', `🔥 [Self-destructing] ${secretMsg} ||ephemeral|10000||`);
+            socket.emit('chat message', { text: `🔥 [Self-destructing] ${secretMsg} ||ephemeral|10000||` });
             break;
         case '/poll':
             // Format: /poll Question | Opt1 | Opt2
@@ -702,7 +714,9 @@ function escapeHtml(text) {
 
 function scrollToBottom() {
     const container = document.getElementById('messages');
-    container.scrollTop = container.scrollHeight;
+    requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+    });
 }
 
 function hideEmptyState() {

@@ -56,10 +56,38 @@ io.on('connection', (socket) => {
             }
             // Update user list for the room they left
             broadcastUserList(prevRoomId);
+
+            // Poll Cleanup: If room is deleted, remove its polls
+            if (!activeRooms[prevRoomId]) {
+                cleanupRoomPolls(prevRoomId);
+            }
         }
     }
 
+    function cleanupRoomPolls(roomId) {
+        for (const pollId in polls) {
+            if (polls[pollId].roomId === roomId) {
+                delete polls[pollId];
+            }
+        }
+        console.log(`Cleaned up polls for room ${roomId}`);
+    }
+
     socket.on('create room', ({ name, roomId, password }) => {
+        // Validation
+        if (!name || name.length > 30 || name.length < 2) {
+            socket.emit('error', 'Name must be between 2 and 30 characters.');
+            return;
+        }
+        if (!roomId || roomId.length > 30 || !/^[a-zA-Z0-9_-]+$/.test(roomId)) {
+            socket.emit('error', 'Room ID must be 1-30 chars and alphanumeric.');
+            return;
+        }
+        if (!password || password.length < 4) {
+            socket.emit('error', 'Password must be at least 4 characters.');
+            return;
+        }
+
         if (roomId.toLowerCase() === 'public') {
             socket.emit('error', 'Cannot create a room named "Public". Use the Public Chat instead.');
             return;
@@ -249,15 +277,26 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // Parse Payload (String or Object)
+        let textContent = '';
+        let attachment = null;
+
+        if (typeof msg === 'object' && msg !== null && !Array.isArray(msg)) {
+            textContent = msg.text || '';
+            attachment = msg.attachment || null;
+        } else {
+            textContent = String(msg || '');
+        }
+
         // Ephemeral Check
         // Format: "Real message ||ephemeral|10000||"
-        let finalMsg = msg;
+        let finalMsg = textContent;
         let ephemeralDuration = 0;
 
-        const ephemeralMatch = msg.match(/\|\|ephemeral\|(\d+)\|\|$/);
+        const ephemeralMatch = textContent.match(/\|\|ephemeral\|(\d+)\|\|$/);
         if (ephemeralMatch) {
             ephemeralDuration = parseInt(ephemeralMatch[1]);
-            finalMsg = msg.replace(ephemeralMatch[0], '').trim();
+            finalMsg = textContent.replace(ephemeralMatch[0], '').trim();
         }
 
         // Generate stable ID on server
@@ -266,7 +305,8 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('chat message', {
             id: msgId,
             name: userName,
-            message: finalMsg,
+            text: finalMsg,
+            attachment: attachment,
             color: userColor,
             ephemeral: ephemeralDuration
         });

@@ -35,7 +35,19 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     overflow: hidden;
+    /* Prevent scroll on body */
+    max-width: 100vw;
+    /* Strict width constraint */
     -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent Media Overflow */
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+    height: auto;
 }
 
 /* ===== ONBOARDING SCREEN ===== */
@@ -245,7 +257,12 @@ body {
 #chatScreen {
     display: none;
     height: 100vh;
+    /* Fallback */
+    height: 100dvh;
+    /* Dynamic Viewport Height for mobile */
     flex-direction: row;
+    max-width: 100vw;
+    overflow: hidden;
 }
 
 #chatScreen.active {
@@ -257,6 +274,8 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
+    min-width: 0;
+    /* Critical for flex child shrinkage */
 }
 
 /* Sidebar */
@@ -438,6 +457,8 @@ body {
     flex-direction: column;
     gap: 0.75rem;
     position: relative;
+    min-width: 0;
+    /* Critical for flex child shrinkage */
     /* For file drop overlay */
 }
 
@@ -557,6 +578,15 @@ body {
     font-size: 0.95rem;
     line-height: 1.5;
     word-wrap: break-word;
+    /* Legacy */
+    overflow-wrap: break-word;
+    /* Modern */
+    word-break: break-word;
+    /* Webkit */
+    min-width: 0;
+    /* Ensure content can shrink */
+    max-width: 100%;
+    /* Ensure it doesn't exceed parent */
 }
 
 .message.own {
@@ -586,21 +616,32 @@ body {
     text-align: center;
 }
 
-.message.code .message-content {
-    background: var(--bg-tertiary);
-    padding: 0;
-    overflow: hidden;
-}
-
-.message.code pre {
-    margin: 0;
+/* Code Blocks inside messages */
+.message-content pre {
+    background: #0d0d12;
+    /* Darker background for code */
     padding: 1rem;
+    border-radius: var(--radius-sm);
     overflow-x: auto;
+    /* Enable horizontal scroll */
+    max-width: 100%;
+    /* Prevent breaking container */
+    margin: 0.5rem 0;
+    border: 1px solid var(--border-subtle);
+    white-space: pre;
+    /* Force horizontal scroll for logic */
 }
 
-.message.code code {
+.message-content code {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.85rem;
+}
+
+/* Inline code */
+.message-content :not(pre)>code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
 }
 
 .empty-state {
