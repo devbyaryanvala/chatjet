@@ -10,6 +10,14 @@ const io = socketIo(server, {
     maxHttpBufferSize: 5e6 // 5 MB for file uploads
 });
 
+// --- Better Logging Helper ---
+const log = {
+    info: (msg) => console.log(`[${new Date().toLocaleTimeString()}] ℹ️  ${msg}`),
+    success: (msg) => console.log(`[${new Date().toLocaleTimeString()}] ✅ ${msg}`),
+    warn: (msg) => console.log(`[${new Date().toLocaleTimeString()}] ⚠️  ${msg}`),
+    error: (msg) => console.error(`[${new Date().toLocaleTimeString()}] ❌ ${msg}`)
+};
+
 
 const userColors = {};
 const polls = {}; // Global poll store
@@ -18,14 +26,14 @@ const activeRooms = {}; // { roomId: { password: '...', users: [] } }
 const userRooms = {}; // { socketId: roomId }
 
 io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
+    log.info(`User connected: ${socket.id}`);
 
     const color = getRandomColor();
     userColors[socket.id] = color;
     socket.emit('color', color);
 
     socket.on('disconnect', () => {
-        console.log(`User disconnected: ${socket.id}`);
+        log.info(`User disconnected: ${socket.id}`);
         const roomId = userRooms[socket.id];
         if (roomId && activeRooms[roomId]) {
             // Remove user from room user list
@@ -33,7 +41,7 @@ io.on('connection', (socket) => {
             // Optional: Delete room if empty
             if (activeRooms[roomId].users.length === 0) {
                 delete activeRooms[roomId];
-                console.log(`Room ${roomId} deleted (empty)`);
+                log.info(`Room ${roomId} deleted (empty)`);
             }
         }
         delete userColors[socket.id];
@@ -70,7 +78,7 @@ io.on('connection', (socket) => {
                 delete polls[pollId];
             }
         }
-        console.log(`Cleaned up polls for room ${roomId}`);
+        log.info(`Cleaned up polls for room ${roomId}`);
     }
 
     socket.on('create room', ({ name, roomId, password }) => {
@@ -108,7 +116,7 @@ io.on('connection', (socket) => {
         userRooms[socket.id] = roomId;
         socket.join(roomId);
 
-        console.log(`User ${name} created room: ${roomId}`);
+        log.success(`User ${name} created room: ${roomId}`);
         socket.emit('room joined', { roomId, isCreator: true });
 
         // Notify room
@@ -134,7 +142,7 @@ io.on('connection', (socket) => {
         userRooms[socket.id] = roomId;
         socket.join(roomId);
 
-        console.log(`User ${name} joined room: ${roomId}`);
+        log.success(`User ${name} joined room: ${roomId}`);
         socket.emit('room joined', { roomId, isCreator: false });
 
         // Notify others in room
@@ -150,7 +158,7 @@ io.on('connection', (socket) => {
         userRooms[socket.id] = roomId;
         socket.join(roomId);
 
-        console.log(`User ${name} joined Public Chat`);
+        log.success(`User ${name} joined Public Chat`);
         socket.emit('room joined', { roomId, isCreator: false });
 
         socket.to(roomId).emit('system message', `${name} joined Public Chat.`);
@@ -195,13 +203,68 @@ io.on('connection', (socket) => {
                 name: userNames[s.id] || 'Unknown',
                 color: userColors[s.id]
             }));
+            // log.info(`Broadcasting ${users.length} users to room ${roomId}`);
             io.to(roomId).emit('room users', users);
         });
     }
 
+    // Allow clients to request user list on demand
+    socket.on('request users', () => {
+        const roomId = userRooms[socket.id];
+        // log.info(`User ${userNames[socket.id] || socket.id} requesting users for room: ${roomId}`);
+        if (roomId) {
+            broadcastUserList(roomId);
+        } else {
+            log.warn(`No room found for socket ${socket.id}, sending empty list`);
+            socket.emit('room users', []);
+        }
+    });
 
 
-    // Invite User
+
+
+    // DM Request Flow
+    socket.on('send dm request', ({ targetId, fromName }) => {
+        io.to(targetId).emit('dm request received', {
+            fromId: socket.id,
+            fromName: fromName
+        });
+    });
+
+    socket.on('dm accepted', ({ fromId, toId }) => {
+        // Create unique room ID for DM
+        // Sort IDs to ensure same room ID regardless of who accepted
+        const user1 = fromId;
+        const user2 = toId; // This socket
+        const dmRoomId = `DM-${[user1, user2].sort().join('-')}`;
+
+        // Notify both to join the new room
+        // We use io.to() because we want to target specific sockets
+        io.to(user1).emit('join dm room', { roomId: dmRoomId });
+        io.to(user2).emit('join dm room', { roomId: dmRoomId });
+    });
+
+    // Handle joining DM room (client will emit this after receiving 'join dm room')
+    socket.on('join dm', ({ roomId, name }) => {
+        leavePreviousRoom(socket);
+
+        userNames[socket.id] = name;
+        userRooms[socket.id] = roomId;
+        socket.join(roomId);
+
+        log.success(`User ${name} joined DM Room ${roomId}`);
+
+        // Notify user they joined
+        socket.emit('room joined', { roomId, isCreator: false });
+
+        // Notify others in room
+        socket.to(roomId).emit('system message', `${name} joined the chat.`);
+
+        // Broadcast updated user list
+        broadcastUserList(roomId);
+    });
+
+    // Invite User (Legacy/General)
     socket.on('invite user', ({ targetId, roomId, inviterName }) => {
         io.to(targetId).emit('invite received', { roomId, inviterName });
     });
@@ -222,21 +285,25 @@ io.on('connection', (socket) => {
     });
 
     // Vote Poll
-    socket.on('vote poll', ({ pollId, optionIndex, voter }) => {
-        console.log(`Vote attempt: Poll ${pollId}, Option ${optionIndex}, Voter ${voter} (${socket.id})`);
+    socket.on('vote poll', ({ pollId, optionIndex, voter, userId }) => {
+        log.info(`Vote attempt: Poll ${pollId}, Option ${optionIndex}, Voter ${voter}`);
         const poll = polls[pollId];
         if (!poll) {
-            console.log('Poll not found');
+            log.error('Poll not found');
             return;
         }
 
-        // Simple check: Allow 1 vote per user (using socket id)
-        // If they already voted, are we changing vote? Or preventing?
-        // Let's implements: If voted, remove old vote, add new.
+        // Use persistent userId if available, otherwise fallback to socket.id
+        const voterKey = userId || socket.id;
 
-        const previousVoteIndex = poll.voters[socket.id];
+        const previousVoteIndex = poll.voters[voterKey];
 
         if (previousVoteIndex !== undefined) {
+            // Check if voting for same option - if so, maybe toggle off? or just return?
+            // User says "voting just keeps increasing" so they want to switch or just update.
+            // Current logic removes old vote and adds new one, which allows switching.
+            // If same option, we could do nothing, but re-voting same option is harmless with this logic.
+
             // Remove previous vote
             if (poll.options[previousVoteIndex]) {
                 poll.options[previousVoteIndex].count--;
@@ -245,7 +312,7 @@ io.on('connection', (socket) => {
 
         // Add new vote
         poll.options[optionIndex].count++;
-        poll.voters[socket.id] = optionIndex;
+        poll.voters[voterKey] = optionIndex;
 
         // Calculate total for percentages
         const totalVotes = poll.options.reduce((a, b) => a + b.count, 0);
@@ -260,7 +327,7 @@ io.on('connection', (socket) => {
     // Legacy support or fallback? userNames mainly set in join/create now.
     socket.on('set name', (name) => {
         userNames[socket.id] = name;
-        console.log(`User ${socket.id} set name: ${name}`);
+        log.info(`User ${socket.id} set name: ${name}`);
         // Optionally update user list if they are in a room
         const roomId = userRooms[socket.id];
         if (roomId) broadcastUserList(roomId);
@@ -312,6 +379,10 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('delete message', ({ msgId, roomId }) => {
+        io.to(roomId).emit('message deleted', msgId);
+    });
+
 });
 
 function getRandomColor() {
@@ -331,12 +402,14 @@ function getRandomColor() {
     return 'rgb(' + r + ',' + g + ',' + b + ')';
 }
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'client/dist')));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Handle React routing, return all requests to React app
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
 });
 
-server.listen(2800, () => {
-    console.log('Server is running on port 2800');
+const PORT = process.env.PORT || 2800;
+server.listen(PORT, () => {
+    log.success(`Server is running on port ${PORT}`);
 });
