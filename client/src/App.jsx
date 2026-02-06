@@ -4,7 +4,10 @@ import Onboarding from './components/Onboarding';
 import ChatScreen from './components/ChatScreen';
 
 // Initialize socket outside component to prevent reconnection on re-renders
-const socket = io('http://localhost:2800');
+// Initialize socket outside component to prevent reconnection on re-renders
+const SOCKET_URL = import.meta.env.PROD ? '/' : 'http://localhost:2800';
+const socket = io(SOCKET_URL);
+
 
 // Session timeout (2 minutes of inactivity clears session)
 const SESSION_TIMEOUT = 2 * 60 * 1000;
