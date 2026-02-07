@@ -375,7 +375,8 @@ io.on('connection', (socket) => {
             text: finalMsg,
             attachment: attachment,
             color: userColor,
-            ephemeral: ephemeralDuration
+            ephemeral: ephemeralDuration,
+            timestamp: Date.now()
         });
     });
 
@@ -386,10 +387,10 @@ io.on('connection', (socket) => {
 });
 
 function getRandomColor() {
-    r = Math.ceil(Math.random() * 255);
-    g = Math.ceil(Math.random() * 255);
-    b = Math.ceil(Math.random() * 255);
-    c = 50;
+    let r = Math.ceil(Math.random() * 255);
+    let g = Math.ceil(Math.random() * 255);
+    let b = Math.ceil(Math.random() * 255);
+    const c = 50;
     if (r <= c) {
         r *= 2;
     }

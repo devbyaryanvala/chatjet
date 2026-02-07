@@ -14,8 +14,28 @@ import DOMPurify from 'dompurify';
 export default function MessageItem({ message, isOwn, onDelete }) {
     const contentRef = useRef(null);
     const [copiedId, setCopiedId] = useState(null);
+    const [isExpired, setIsExpired] = useState(false);
+    const [countdown, setCountdown] = useState(null);
 
-    // ... (useEffect remains same) ...
+    // Ephemeral message countdown and auto-delete
+    useEffect(() => {
+        if (message.ephemeral > 0 && !isExpired) {
+            const startTime = Date.now();
+            const endTime = startTime + message.ephemeral;
+
+            const interval = setInterval(() => {
+                const remaining = Math.max(0, endTime - Date.now());
+                setCountdown(Math.ceil(remaining / 1000));
+
+                if (remaining <= 0) {
+                    clearInterval(interval);
+                    setIsExpired(true);
+                }
+            }, 100);
+
+            return () => clearInterval(interval);
+        }
+    }, [message.ephemeral, isExpired]);
 
     useEffect(() => {
         if (contentRef.current) {
@@ -73,15 +93,36 @@ export default function MessageItem({ message, isOwn, onDelete }) {
         }
     }, [message.text]);
 
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Don't render if ephemeral message has expired (must be after all hooks)
+    if (isExpired) {
+        return null;
+    }
+
+    // Use actual timestamp from message, fallback to current time
+    const time = message.timestamp
+        ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     // Avatar generator
     const avatarContent = message.name ? message.name.substring(0, 2).toUpperCase() : '??';
 
+    // Escape HTML entities to prevent rendering raw HTML
+    const escapeHtml = (text) => {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, (char) => map[char]);
+    };
+
     // Parse Markdown safely
     const getRenderedContent = () => {
         if (!message.text) return { __html: '' };
-        const rawMarkup = marked.parse(message.text);
+        const escapedText = escapeHtml(message.text);
+        const rawMarkup = marked.parse(escapedText);
         return { __html: DOMPurify.sanitize(rawMarkup) };
     };
 
@@ -138,9 +179,9 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                     )
                 )}
 
-                {message.ephemeral > 0 && (
+                {message.ephemeral > 0 && countdown !== null && (
                     <span style={{ fontSize: '0.7em', color: '#f43f5e', marginLeft: '5px' }}>
-                        To ensure privacy, this message self-destructs... 🔥
+                        🔥 Self-destructs in {countdown}s...
                     </span>
                 )}
             </div>

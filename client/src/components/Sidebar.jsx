@@ -1,19 +1,16 @@
 import { useState, useEffect } from 'react';
 import { UserPlus, Check, X } from 'lucide-react';
 
-export default function Sidebar({ socket, users, userName, currentUser, onStartDM, inviteRequests = [], onAcceptInvite, onDeclineInvite }) {
-    const [isOpen, setIsOpen] = useState(false);
+export default function Sidebar({ socket, users, userName, currentUser, onStartDM, inviteRequests = [], onAcceptInvite, onDeclineInvite, isOpen = false, onClose }) {
 
     // Listen for window resize to handle responsiveness
     useEffect(() => {
         const handleResize = () => {
-            if (window.innerWidth > 768) setIsOpen(false);
+            if (window.innerWidth > 768 && onClose) onClose();
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const toggleSidebar = () => setIsOpen(!isOpen);
+    }, [onClose]);
 
     return (
         <div className={`sidebar ${isOpen ? 'open' : ''}`} id="sidebar">

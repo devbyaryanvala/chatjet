@@ -513,6 +513,8 @@ svg {
   max-width: 70%;
   animation: messageIn 0.3s ease;
   position: relative;
+  align-self: flex-start;
+  /* Default: align to left */
 }
 
 .message:hover .reaction-btn {

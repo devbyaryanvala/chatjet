@@ -4,7 +4,6 @@ import Onboarding from './components/Onboarding';
 import ChatScreen from './components/ChatScreen';
 
 // Initialize socket outside component to prevent reconnection on re-renders
-// Initialize socket outside component to prevent reconnection on re-renders
 const SOCKET_URL = import.meta.env.PROD ? '/' : 'http://localhost:2800';
 const socket = io(SOCKET_URL);
 
@@ -92,8 +91,9 @@ function App() {
           socket.emit('join public', { name: savedName });
         } else {
           // For private rooms, we can't auto-rejoin without password
-          // So just restore the name and show onboarding
-          hasAutoJoined.current = false;
+          // Clear saved room and show onboarding (keep name for convenience)
+          localStorage.removeItem('chatjet_room');
+          hasAutoJoined.current = true; // Prevent retry loops
         }
       }
     });

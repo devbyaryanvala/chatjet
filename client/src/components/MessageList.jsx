@@ -35,9 +35,7 @@ export default function MessageList({ messages, userName, socket, onDeleteMessag
                     );
                 }
 
-                if (msg.roomId && msg.options) { // Use msg.type check if consistent, or structure check
-                    // 'new poll' logic in ChatScreen adds { ...poll, type: 'poll' }
-                    // So we can check msg.type === 'poll' or fallback to structure
+                if (msg.type === 'poll') {
                     return (
                         <Poll
                             key={msg.id}

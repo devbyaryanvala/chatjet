@@ -146,7 +146,7 @@ export default function MessageInput({ socket, currentRoom, userName, onSendMess
 
     const toggleCodeMode = () => {
         setCodeMode(!codeMode);
-        setShowLangDropdown(false);
+        setCodeLanguage(null); // Reset detected language when toggling
         if (textareaRef.current) textareaRef.current.focus();
     };
 

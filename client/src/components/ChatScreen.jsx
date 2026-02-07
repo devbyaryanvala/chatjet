@@ -8,6 +8,7 @@ export default function ChatScreen({ socket, user, room, setRoom, sessionTimeLef
     const [messages, setMessages] = useState([]); // Array of { type: 'message'|'system', ... }
     const [users, setUsers] = useState([]);
     const [typingUser, setTypingUser] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const [inviteRequests, setInviteRequests] = useState([]);
 
@@ -115,9 +116,17 @@ export default function ChatScreen({ socket, user, room, setRoom, sessionTimeLef
     }, [room, socket, user]);
 
 
+    const MAX_HISTORY_SIZE = 100; // Limit localStorage history
+
     const addMessage = (msg) => {
         setMessages(prev => {
-            const newHistory = [...prev, msg];
+            let newHistory = [...prev, msg];
+
+            // Trim to max history size to prevent localStorage overflow
+            if (newHistory.length > MAX_HISTORY_SIZE) {
+                newHistory = newHistory.slice(-MAX_HISTORY_SIZE);
+            }
+
             // Save to localStorage immediately
             if (msg.type !== 'system' || msg.text.includes('joined')) {
                 localStorage.setItem(`chatjet_hist_${room}`, JSON.stringify(newHistory));
@@ -247,9 +256,7 @@ export default function ChatScreen({ socket, user, room, setRoom, sessionTimeLef
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                         <button
                             className="btn-leave"
-                            onClick={(e) => {
-                                document.getElementById('sidebar').classList.toggle('open');
-                            }}
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
                             style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}
                         >
                             👥
@@ -286,6 +293,8 @@ export default function ChatScreen({ socket, user, room, setRoom, sessionTimeLef
                 inviteRequests={inviteRequests}
                 onAcceptInvite={handleAcceptInvite}
                 onDeclineInvite={handleDeclineInvite}
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
             />
         </div>
     );
