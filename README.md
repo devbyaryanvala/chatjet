@@ -16,6 +16,7 @@ A real-time, enterprise-grade team chat application built with React, Node.js, a
 - [Load Testing](#load-testing)
 - [Deployment](#deployment)
 - [Known Limitations](#known-limitations)
+- [Credits](#credits)
 
 ---
 
@@ -322,3 +323,15 @@ npm start
 - **File attachments** — sent as base64 over WebSocket. Large files increase message size significantly and are not stored after the session ends.
 - **Private room auto-rejoin** — users in private rooms are not automatically rejoined after a page refresh because the passcode is not stored. They are returned to the onboarding screen with their display name preserved.
 - **Session timeout** — the 2-minute inactivity timer clears the session and requires the user to rejoin manually.
+
+---
+
+## Credits
+
+Designed and developed by **Aryan Vala**.
+
+| Platform | Link |
+|---|---|
+| Instagram | [@dez.aryan](https://www.instagram.com/dez.aryan) |
+| LinkedIn | [aryan-vala](https://www.linkedin.com/in/aryan-vala-ba62a1212/) |
+

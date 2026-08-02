@@ -89,7 +89,8 @@ io.on('connection', (socket) => {
         log.info(`Cleaned up polls for room ${roomId}`);
     }
 
-    // Helper to check if a username is already taken by another active user in a room
+    // Helper to check if a username is already taken by another ACTIVE user in a room.
+    // Skips ghost sockets (e.g. from a page refresh) that are no longer connected.
     function isNameTakenInRoom(name, roomId, currentSocketId) {
         if (!name || !roomId) return false;
         const normalized = name.trim().toLowerCase();
@@ -97,7 +98,18 @@ io.on('connection', (socket) => {
             if (rId === roomId && sId !== currentSocketId) {
                 const existingName = (userNames[sId] || '').trim().toLowerCase();
                 if (existingName === normalized) {
-                    return true;
+                    // Make sure the conflicting socket is still actually connected.
+                    // On page refresh the old socket may still be in our maps but
+                    // already disconnected — don't treat it as a collision.
+                    const existingSocket = io.sockets.sockets.get(sId);
+                    if (existingSocket && existingSocket.connected) {
+                        return true;
+                    }
+                    // Ghost socket — clean it up now so it doesn't linger
+                    delete userColors[sId];
+                    delete userAvatars[sId];
+                    delete userNames[sId];
+                    delete userRooms[sId];
                 }
             }
         }

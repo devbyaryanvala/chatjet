@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Lock, ArrowRight, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
+import { Globe, Lock, ArrowRight, ShieldCheck, AlertCircle, Sparkles, Info, X, Instagram, Linkedin } from 'lucide-react';
 import { getAvatarUrl } from '../utils/avatar';
 import ChatJetIcon from '../assets/ChatJetIcon.png';
 
@@ -10,6 +10,7 @@ export default function Onboarding({ socket, setUser, setRoom }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
 
     useEffect(() => {
         const handleError = (errMsg) => {
@@ -66,14 +67,67 @@ export default function Onboarding({ socket, setUser, setRoom }) {
 
     return (
         <div id="onboarding">
+            {/* Info / Credits Modal */}
+            {showInfo && (
+                <div className="info-modal-overlay" onClick={() => setShowInfo(false)}>
+                    <div className="info-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            className="info-modal-close"
+                            onClick={() => setShowInfo(false)}
+                            title="Close"
+                        >
+                            <X size={16} />
+                        </button>
+                        <div className="info-modal-avatar">
+                            <img
+                                src={getAvatarUrl('Aryan')}
+                                alt="Aryan"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        </div>
+                        <div className="info-modal-name">Aryan Vala</div>
+                        <div className="info-modal-tagline">Developer &amp; Designer</div>
+                        <div className="info-modal-links">
+                            <a
+                                href="https://www.instagram.com/dez.aryan"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="info-link"
+                            >
+                                <Instagram size={15} />
+                                <span>dez.aryan</span>
+                            </a>
+                            <a
+                                href="https://www.linkedin.com/in/aryan-vala-ba62a1212/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="info-link"
+                            >
+                                <Linkedin size={15} />
+                                <span>aryan-vala</span>
+                            </a>
+                        </div>
+                        <div className="info-modal-footer">Built with ChatJet</div>
+                    </div>
+                </div>
+            )}
+
             <div className="onboard-card">
                 <div className="brand-header">
                     <div className="brand-badge">
                         <img src={ChatJetIcon} alt="ChatJet Logo" className="brand-logo-img" />
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                         <div className="brand-title">ChatJet</div>
                     </div>
+                    <button
+                        type="button"
+                        className="info-btn"
+                        onClick={() => setShowInfo(true)}
+                        title="About / Credits"
+                    >
+                        <Info size={16} />
+                    </button>
                 </div>
 
                 <h1 className="onboard-heading">Welcome back</h1>
