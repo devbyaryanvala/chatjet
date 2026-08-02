@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import Onboarding from './components/Onboarding';
 import ChatScreen from './components/ChatScreen';
+import { getClientId } from './utils/clientId';
 
 // Initialize socket outside component to prevent reconnection on re-renders
 const SOCKET_URL = import.meta.env.PROD ? '/' : 'http://localhost:2800';
@@ -18,6 +19,20 @@ function App() {
   const [isLoading, setIsLoading] = useState(true); // Show loading while checking session
   const [timeLeft, setTimeLeft] = useState(SESSION_TIMEOUT);
   const hasAutoJoined = useRef(false);
+
+  // Cleanly disconnect socket on page refresh or tab close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      try {
+        socket.emit('leave room');
+        socket.disconnect();
+      } catch (_) {}
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // Check for existing session and auto-rejoin
   useEffect(() => {
@@ -88,7 +103,7 @@ function App() {
         setUserName(savedName);
 
         if (savedRoom === 'Public') {
-          socket.emit('join public', { name: savedName });
+          socket.emit('join public', { name: savedName, clientId: getClientId() });
         } else {
           // For private rooms, we can't auto-rejoin without password
           // Clear saved room and show onboarding (keep name for convenience)

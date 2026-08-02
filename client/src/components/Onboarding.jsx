@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Globe, Lock, ArrowRight, ShieldCheck, AlertCircle, Sparkles, Info, X, Instagram, Linkedin } from 'lucide-react';
 import { getAvatarUrl } from '../utils/avatar';
+import { getClientId } from '../utils/clientId';
 import ChatJetIcon from '../assets/ChatJetIcon.png';
 
 export default function Onboarding({ socket, setUser, setRoom }) {
@@ -50,8 +51,10 @@ export default function Onboarding({ socket, setUser, setRoom }) {
         localStorage.setItem('chatjet_name', cleanName);
         setUser(cleanName);
 
+        const clientId = getClientId();
+
         if (mode === 'public') {
-            socket.emit('join public', { name: cleanName });
+            socket.emit('join public', { name: cleanName, clientId });
         } else {
             const cleanRoomId = roomId.trim();
             const cleanPassword = password.trim();
@@ -61,7 +64,7 @@ export default function Onboarding({ socket, setUser, setRoom }) {
                 return;
             }
             const event = isCreating ? 'create room' : 'join room';
-            socket.emit(event, { name: cleanName, roomId: cleanRoomId, password: cleanPassword });
+            socket.emit(event, { name: cleanName, roomId: cleanRoomId, password: cleanPassword, clientId });
         }
     };
 

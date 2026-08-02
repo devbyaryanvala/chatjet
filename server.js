@@ -7,7 +7,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: { origin: "*" },
-    maxHttpBufferSize: 20e6 // 20 MB for file uploads and base64 payloads
+    maxHttpBufferSize: 20e6,  // 20 MB for file uploads and base64 payloads
+
+    // Detect stale/refreshed connections quickly.
+    // Default pingInterval (25s) + pingTimeout (20s) means the server can
+    // think a refreshed client is still online for up to ~30s on Render.
+    // These values bring that down to ~5 seconds.
+    pingInterval: 5000,   // send a heartbeat every 5s (default: 25000)
+    pingTimeout: 4000,    // declare dead if no pong within 4s (default: 20000)
 });
 
 // --- Better Logging Helper ---
@@ -25,6 +32,7 @@ const polls = {}; // Global poll store
 const userNames = {};
 const activeRooms = {}; // { roomId: { password: '...', users: [] } }
 const userRooms = {}; // { socketId: roomId }
+const userClientIds = {}; // { socketId: clientId }
 
 function getAvatarUrl(name, seed) {
     const avatarSeed = encodeURIComponent((name || seed || 'user').trim());
@@ -45,7 +53,7 @@ io.on('connection', (socket) => {
         if (roomId && activeRooms[roomId]) {
             // Remove user from room user list
             activeRooms[roomId].users = activeRooms[roomId].users.filter(id => id !== socket.id);
-            // Optional: Delete room if empty
+            // Optional: Delete room if empty (except Public)
             if (activeRooms[roomId].users.length === 0) {
                 delete activeRooms[roomId];
                 log.info(`Room ${roomId} deleted (empty)`);
@@ -55,8 +63,12 @@ io.on('connection', (socket) => {
         delete userAvatars[socket.id];
         delete userNames[socket.id];
         delete userRooms[socket.id];
+        delete userClientIds[socket.id];
     });
 
+    socket.on('leave room', () => {
+        leavePreviousRoom(socket);
+    });
 
     // Helper to leave previous room
     function leavePreviousRoom(socket) {
@@ -90,33 +102,56 @@ io.on('connection', (socket) => {
     }
 
     // Helper to check if a username is already taken by another ACTIVE user in a room.
-    // Skips ghost sockets (e.g. from a page refresh) that are no longer connected.
-    function isNameTakenInRoom(name, roomId, currentSocketId) {
+    // Skips ghost sockets and handles browser refreshes from the same client smoothly.
+    function isNameTakenInRoom(name, roomId, currentSocketId, clientId) {
         if (!name || !roomId) return false;
         const normalized = name.trim().toLowerCase();
         for (const [sId, rId] of Object.entries(userRooms)) {
             if (rId === roomId && sId !== currentSocketId) {
                 const existingName = (userNames[sId] || '').trim().toLowerCase();
                 if (existingName === normalized) {
-                    // Make sure the conflicting socket is still actually connected.
-                    // On page refresh the old socket may still be in our maps but
-                    // already disconnected — don't treat it as a collision.
+                    const existingClientId = userClientIds[sId];
+
+                    // Case 1: Same browser client refreshed / reconnected
+                    if (clientId && existingClientId && clientId === existingClientId) {
+                        log.info(`User "${name}" reconnected (same clientId) — evicting old socket ${sId}`);
+                        const oldSocket = io.sockets.sockets.get(sId);
+                        if (oldSocket) {
+                            oldSocket.disconnect(true);
+                        }
+                        if (activeRooms[roomId]) {
+                            activeRooms[roomId].users = activeRooms[roomId].users.filter(id => id !== sId);
+                        }
+                        delete userColors[sId];
+                        delete userAvatars[sId];
+                        delete userNames[sId];
+                        delete userRooms[sId];
+                        delete userClientIds[sId];
+                        return false; // Reclaim name immediately
+                    }
+
+                    // Case 2: Different client — check if conflicting socket is actually still alive
                     const existingSocket = io.sockets.sockets.get(sId);
                     if (existingSocket && existingSocket.connected) {
-                        return true;
+                        return true; // Actually in use by another person
                     }
-                    // Ghost socket — clean it up now so it doesn't linger
+
+                    // Case 3: Ghost socket that already dropped connection
+                    if (activeRooms[roomId]) {
+                        activeRooms[roomId].users = activeRooms[roomId].users.filter(id => id !== sId);
+                    }
                     delete userColors[sId];
                     delete userAvatars[sId];
                     delete userNames[sId];
                     delete userRooms[sId];
+                    delete userClientIds[sId];
                 }
             }
         }
         return false;
     }
 
-    socket.on('create room', ({ name, roomId, password }) => {
+    socket.on('create room', ({ name, roomId, password, clientId }) => {
         const trimmedName = (name || '').trim();
         // Validation
         if (!trimmedName || trimmedName.length > 30 || trimmedName.length < 2) {
@@ -151,6 +186,7 @@ io.on('connection', (socket) => {
         userNames[socket.id] = trimmedName;
         userAvatars[socket.id] = getAvatarUrl(trimmedName, socket.id);
         userRooms[socket.id] = roomId;
+        userClientIds[socket.id] = clientId || socket.id;
         socket.join(roomId);
 
         log.success(`User ${trimmedName} created room: ${roomId}`);
@@ -161,7 +197,7 @@ io.on('connection', (socket) => {
         broadcastUserList(roomId);
     });
 
-    socket.on('join room', ({ name, roomId, password }) => {
+    socket.on('join room', ({ name, roomId, password, clientId }) => {
         const trimmedName = (name || '').trim();
         if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 30) {
             socket.emit('error', 'Name must be between 2 and 30 characters.');
@@ -178,7 +214,7 @@ io.on('connection', (socket) => {
             return;
         }
 
-        if (isNameTakenInRoom(trimmedName, roomId, socket.id)) {
+        if (isNameTakenInRoom(trimmedName, roomId, socket.id, clientId)) {
             socket.emit('error', `The name "${trimmedName}" is already taken in this room. Please choose a different name.`);
             return;
         }
@@ -189,6 +225,7 @@ io.on('connection', (socket) => {
         userNames[socket.id] = trimmedName;
         userAvatars[socket.id] = getAvatarUrl(trimmedName, socket.id);
         userRooms[socket.id] = roomId;
+        userClientIds[socket.id] = clientId || socket.id;
         socket.join(roomId);
 
         log.success(`User ${trimmedName} joined room: ${roomId}`);
@@ -199,7 +236,7 @@ io.on('connection', (socket) => {
         broadcastUserList(roomId);
     });
 
-    socket.on('join public', ({ name }) => {
+    socket.on('join public', ({ name, clientId }) => {
         const trimmedName = (name || '').trim();
         if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 30) {
             socket.emit('error', 'Display name must be between 2 and 30 characters.');
@@ -208,7 +245,7 @@ io.on('connection', (socket) => {
 
         const roomId = 'Public';
 
-        if (isNameTakenInRoom(trimmedName, roomId, socket.id)) {
+        if (isNameTakenInRoom(trimmedName, roomId, socket.id, clientId)) {
             socket.emit('error', `The name "${trimmedName}" is already taken in Public Chat. Please choose a different name.`);
             return;
         }
@@ -218,6 +255,7 @@ io.on('connection', (socket) => {
         userNames[socket.id] = trimmedName;
         userAvatars[socket.id] = getAvatarUrl(trimmedName, socket.id);
         userRooms[socket.id] = roomId;
+        userClientIds[socket.id] = clientId || socket.id;
         socket.join(roomId);
 
         log.success(`User ${trimmedName} joined Public Chat`);
