@@ -110,7 +110,7 @@ export default function Onboarding({ socket, setUser, setRoom }) {
                                 <span>aryan-vala</span>
                             </a>
                         </div>
-                        <div className="info-modal-footer">Built with ChatJet</div>
+                        <div className="info-modal-footer">ChatJet v2.0.0 &bull; Velocity Release</div>
                     </div>
                 </div>
             )}
@@ -121,7 +121,11 @@ export default function Onboarding({ socket, setUser, setRoom }) {
                         <img src={ChatJetIcon} alt="ChatJet Logo" className="brand-logo-img" />
                     </div>
                     <div style={{ flex: 1 }}>
-                        <div className="brand-title">ChatJet</div>
+                        <div className="brand-title-row">
+                            <div className="brand-title">ChatJet</div>
+                            <span className="brand-version-badge">v2.0.0</span>
+                        </div>
+                        <div className="brand-version-name">Velocity Edition</div>
                     </div>
                     <button
                         type="button"
@@ -244,6 +248,10 @@ export default function Onboarding({ socket, setUser, setRoom }) {
                             </button>
                         </>
                     )}
+                </div>
+
+                <div className="onboard-footer">
+                    <span>ChatJet <strong className="version-tag">v2.0.0</strong> &bull; <em>Velocity</em></span>
                 </div>
             </div>
         </div>

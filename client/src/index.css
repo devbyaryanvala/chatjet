@@ -283,11 +283,54 @@ button, input, textarea {
   border-radius: var(--radius-sm);
 }
 
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .brand-title {
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
+}
+
+.brand-version-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  padding: 0.1rem 0.45rem;
+  background: var(--accent-subtle);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.brand-version-name {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.onboard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.onboard-footer .version-tag {
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
 }
 
 .onboard-heading {
