@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { marked } from 'marked';
+import { Download, Trash2, Copy, Check, FileText } from 'lucide-react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-c';
@@ -24,6 +25,7 @@ import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-css';
 import DOMPurify from 'dompurify';
+import { getAvatarUrl } from '../utils/avatar';
 
 export default function MessageItem({ message, isOwn, onDelete }) {
     const contentRef = useRef(null);
@@ -52,44 +54,36 @@ export default function MessageItem({ message, isOwn, onDelete }) {
 
     useEffect(() => {
         if (contentRef.current) {
-            // Process code blocks: add language labels and copy buttons
             const preElements = contentRef.current.querySelectorAll('pre');
 
             preElements.forEach((pre, index) => {
-                // Skip if already processed
                 if (pre.parentElement?.classList.contains('code-block-wrapper')) return;
 
                 const code = pre.querySelector('code');
                 if (!code) return;
 
-                // Detect language from class (e.g., "language-c" or "language-javascript")
                 const langClass = Array.from(code.classList).find(c => c.startsWith('language-'));
                 let language = langClass ? langClass.replace('language-', '') : '';
                 if (!language || language === 'null' || language === 'undefined') {
                     language = 'CODE';
                 }
 
-                // Create wrapper
                 const wrapper = document.createElement('div');
                 wrapper.className = 'code-block-wrapper';
 
-                // Create header with language label and copy button
                 const header = document.createElement('div');
                 header.className = 'code-block-header';
                 header.innerHTML = `
                     <span class="code-language">${language.toUpperCase()}</span>
                     <button class="code-copy-btn" data-code-index="${index}">
-                        <span class="copy-icon">📋</span>
                         <span class="copy-text">Copy</span>
                     </button>
                 `;
 
-                // Insert wrapper
                 pre.parentNode.insertBefore(wrapper, pre);
                 wrapper.appendChild(header);
                 wrapper.appendChild(pre);
 
-                // Add copy functionality
                 const copyBtn = header.querySelector('.code-copy-btn');
                 copyBtn.addEventListener('click', () => {
                     const codeText = code.textContent;
@@ -105,32 +99,26 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                 });
             });
 
-            // Highlight syntax
             Prism.highlightAllUnder(contentRef.current);
         }
     }, [message.text]);
 
-    // Don't render if ephemeral message has expired (must be after all hooks)
     if (isExpired) {
         return null;
     }
 
-    // Use actual timestamp from message, fallback to current time
     const time = message.timestamp
         ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Avatar generator
     const avatarContent = message.name ? message.name.substring(0, 2).toUpperCase() : '??';
 
-    // Parse Markdown safely without double-escaping entities
     const getRenderedContent = () => {
         if (!message.text) return { __html: '' };
         const rawMarkup = marked.parse(message.text, { breaks: true, gfm: true });
         return { __html: DOMPurify.sanitize(rawMarkup) };
     };
 
-    // Robust file download handler converting data-URI / base64 to Blob
     const handleDownload = (e, attachment) => {
         e.preventDefault();
         e.stopPropagation();
@@ -188,30 +176,43 @@ export default function MessageItem({ message, isOwn, onDelete }) {
         return ext ? ext.toUpperCase() : 'FILE';
     };
 
-    const isImageAttachment = message.attachment && (
+    const isImageAttachment = message.attachment && message.attachment.data && (
         (message.attachment.type || '').startsWith('image/') ||
         /\.(png|jpe?g|gif|webp|svg)$/i.test(message.attachment.name || '')
     );
 
+    const isAudioAttachment = message.attachment && message.attachment.data && (
+        (message.attachment.type || '').startsWith('audio/') ||
+        /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(message.attachment.name || '')
+    );
+
+    const isVideoAttachment = message.attachment && message.attachment.data && (
+        (message.attachment.type || '').startsWith('video/') ||
+        /\.(mp4|webm|ogv|mov)$/i.test(message.attachment.name || '')
+    );
+
     return (
         <div className={`message ${isOwn ? 'own' : ''}`} id={`msg-${message.id}`}>
-            <div className={`message-header`} style={{ justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
+            <div className="message-header">
                 {!isOwn && (
                     <div
                         className="user-avatar"
                         style={{
-                            width: '24px',
-                            height: '24px',
-                            fontSize: '0.7rem',
-                            background: message.color || '#666',
-                            marginRight: '0.5rem',
-                            display: 'inline-flex'
+                            background: message.color || '#3b82f6',
                         }}
                     >
-                        {avatarContent}
+                        <img
+                            src={message.avatar || getAvatarUrl(message.name)}
+                            alt={message.name}
+                            className="user-avatar-img"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                            }}
+                        />
+                        <span className="user-avatar-initials">{avatarContent}</span>
                     </div>
                 )}
-                <span className="message-author" style={{ color: message.color }}>{message.name}</span>
+                <span className="message-author" style={{ color: message.color || '#94a3b8' }}>{message.name}</span>
                 <span className="message-time">{time}</span>
                 {isOwn && onDelete && (
                     <button
@@ -219,7 +220,7 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                         onClick={onDelete}
                         title="Delete Message"
                     >
-                        ✕
+                        <Trash2 size={12} />
                     </button>
                 )}
             </div>
@@ -229,26 +230,51 @@ export default function MessageItem({ message, isOwn, onDelete }) {
 
                 {message.attachment && (
                     isImageAttachment ? (
-                        <img
-                            src={message.attachment.data}
-                            alt={message.attachment.name}
-                            style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '0.5rem', display: 'block' }}
-                        />
+                        <div style={{ marginTop: '0.5rem' }}>
+                            <img
+                                src={message.attachment.data}
+                                alt={message.attachment.name}
+                                style={{ maxWidth: '100%', maxHeight: '350px', borderRadius: 'var(--radius-sm)', display: 'block', objectFit: 'contain' }}
+                            />
+                        </div>
+                    ) : isAudioAttachment ? (
+                        <div style={{ marginTop: '0.5rem', width: '100%' }}>
+                            <audio
+                                controls
+                                src={message.attachment.data}
+                                style={{ width: '100%', borderRadius: 'var(--radius-sm)', display: 'block', outline: 'none' }}
+                            />
+                            <div className="file-attachment-card" style={{ marginTop: '0.4rem' }}>
+                                <div className="file-icon-badge">
+                                    {getFileExt(message.attachment.name).slice(0, 4)}
+                                </div>
+                                <div className="file-info">
+                                    <div className="file-name" title={message.attachment.name}>{message.attachment.name}</div>
+                                    <div className="file-type">
+                                        {formatFileSize(message.attachment.size) || 'Audio Attachment'}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleDownload(e, message.attachment)}
+                                    className="btn-download"
+                                >
+                                    <Download size={13} />
+                                    <span>Download</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : isVideoAttachment ? (
+                        <div style={{ marginTop: '0.5rem', width: '100%' }}>
+                            <video
+                                controls
+                                src={message.attachment.data}
+                                style={{ maxWidth: '100%', maxHeight: '320px', borderRadius: 'var(--radius-sm)', display: 'block' }}
+                            />
+                        </div>
                     ) : (
                         <div className="file-attachment-card">
-                            <div className="file-icon" style={{
-                                width: '38px',
-                                height: '38px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: 'rgba(0, 212, 255, 0.15)',
-                                border: '1px solid rgba(0, 212, 255, 0.3)',
-                                borderRadius: '8px',
-                                color: 'var(--accent-primary)',
-                                fontWeight: 700,
-                                fontSize: '0.75rem'
-                            }}>
+                            <div className="file-icon-badge">
                                 {getFileExt(message.attachment.name).slice(0, 4)}
                             </div>
                             <div className="file-info">
@@ -257,21 +283,23 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                                     {formatFileSize(message.attachment.size) || 'Attachment'}
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={(e) => handleDownload(e, message.attachment)}
-                                className="btn-download"
-                                style={{ cursor: 'pointer', border: '1px solid var(--border-active)' }}
-                            >
-                                Download
-                            </button>
+                            {message.attachment.data && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleDownload(e, message.attachment)}
+                                    className="btn-download"
+                                >
+                                    <Download size={13} />
+                                    <span>Download</span>
+                                </button>
+                            )}
                         </div>
                     )
                 )}
 
                 {message.ephemeral > 0 && countdown !== null && (
-                    <span style={{ fontSize: '0.7em', color: '#f43f5e', marginLeft: '5px' }}>
-                        🔥 Self-destructs in {countdown}s...
+                    <span style={{ fontSize: '0.75rem', color: '#f87171', display: 'inline-block', marginTop: '0.35rem' }}>
+                        ⏳ Expiring in {countdown}s...
                     </span>
                 )}
             </div>

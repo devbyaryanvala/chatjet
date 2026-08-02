@@ -108,7 +108,9 @@ function App() {
     });
 
     socket.on('error', (msg) => {
-      alert(msg);
+      if (currentRoom) {
+        alert(msg);
+      }
     });
 
     return () => {

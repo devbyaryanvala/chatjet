@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Globe, Lock, ArrowRight, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
+import { getAvatarUrl } from '../utils/avatar';
+import ChatJetIcon from '../assets/ChatJetIcon.png';
 
 export default function Onboarding({ socket, setUser, setRoom }) {
     const [mode, setMode] = useState('public');
@@ -6,109 +9,185 @@ export default function Onboarding({ socket, setUser, setRoom }) {
     const [roomId, setRoomId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        const handleError = (errMsg) => {
+            setError(errMsg);
+            setIsSubmitting(false);
+        };
+
+        const handleRoomJoined = () => {
+            setIsSubmitting(false);
+        };
+
+        socket.on('error', handleError);
+        socket.on('room joined', handleRoomJoined);
+
+        return () => {
+            socket.off('error', handleError);
+            socket.off('room joined', handleRoomJoined);
+        };
+    }, [socket]);
 
     const handleJoin = (isCreating = false) => {
-        if (!name.trim()) {
-            setError('Please enter your name');
+        const cleanName = name.trim();
+        if (!cleanName) {
+            setError('Please enter your display name to continue');
+            return;
+        }
+
+        if (cleanName.length < 2 || cleanName.length > 30) {
+            setError('Display name must be between 2 and 30 characters');
             return;
         }
 
         setError('');
+        setIsSubmitting(true);
 
-        // Save name to parent state and localStorage
-        localStorage.setItem('chatjet_name', name);
-        setUser(name);
+        // Save name to state and localStorage
+        localStorage.setItem('chatjet_name', cleanName);
+        setUser(cleanName);
 
         if (mode === 'public') {
-            socket.emit('join public', { name });
+            socket.emit('join public', { name: cleanName });
         } else {
-            if (!roomId.trim() || !password.trim()) {
-                setError('Please enter Room ID and Password');
+            const cleanRoomId = roomId.trim();
+            const cleanPassword = password.trim();
+            if (!cleanRoomId || !cleanPassword) {
+                setError('Please enter both Room ID and Password');
+                setIsSubmitting(false);
                 return;
             }
             const event = isCreating ? 'create room' : 'join room';
-            socket.emit(event, { name, roomId, password });
+            socket.emit(event, { name: cleanName, roomId: cleanRoomId, password: cleanPassword });
         }
     };
 
     return (
         <div id="onboarding">
-            <div className="onboard-container">
-                <div className="brand">
-                    <div className="brand-icon">💬</div>
-                    <div className="brand-text">ChatJet</div>
+            <div className="onboard-card">
+                <div className="brand-header">
+                    <div className="brand-badge">
+                        <img src={ChatJetIcon} alt="ChatJet Logo" className="brand-logo-img" />
+                    </div>
+                    <div>
+                        <div className="brand-title">ChatJet</div>
+                    </div>
                 </div>
 
-                <h1 className="onboard-title">Start chatting<br />instantly.</h1>
-                <p className="onboard-subtitle">Join the public conversation or create a private room.</p>
+                <h1 className="onboard-heading">Welcome back</h1>
+                <p className="onboard-subtext">Join the public workspace or access a private team room.</p>
 
-                <div className="mode-toggle">
+                <div className="segmented-tabs">
                     <button
-                        className={`mode-btn ${mode === 'public' ? 'active' : ''}`}
-                        onClick={() => setMode('public')}
+                        type="button"
+                        className={`tab-btn ${mode === 'public' ? 'active' : ''}`}
+                        onClick={() => { setMode('public'); setError(''); }}
                     >
-                        🌐 Public Chat
+                        <Globe size={15} /> Public Chat
                     </button>
                     <button
-                        className={`mode-btn ${mode === 'private' ? 'active' : ''}`}
-                        onClick={() => setMode('private')}
+                        type="button"
+                        className={`tab-btn ${mode === 'private' ? 'active' : ''}`}
+                        onClick={() => { setMode('private'); setError(''); }}
                     >
-                        🔒 Private Room
+                        <Lock size={15} /> Private Room
                     </button>
                 </div>
 
-                <div className="input-group">
-                    <label className="input-label">Your Name</label>
-                    <input
-                        type="text"
-                        className="input-field"
-                        placeholder="Enter your display name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                    />
+                <div className="form-group">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                        <label className="form-label" style={{ marginBottom: 0 }}>Display Name</label>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <Sparkles size={11} /> Auto Avatar
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <div className="user-avatar-preview" title="Auto-generated Profile Picture">
+                            <img
+                                src={getAvatarUrl(name || 'guest')}
+                                alt="Avatar Preview"
+                                className="user-item-avatar-img"
+                            />
+                        </div>
+                        <input
+                            type="text"
+                            className="form-input"
+                            style={{ flex: 1 }}
+                            placeholder="e.g. Alex Morgan"
+                            value={name}
+                            onChange={(e) => { setName(e.target.value); setError(''); }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleJoin(false)}
+                            autoFocus
+                        />
+                    </div>
                 </div>
 
                 {mode === 'private' && (
-                    <div className="private-fields visible">
-                        <div className="input-group">
-                            <label className="input-label">Room ID</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Room Identifier</label>
                             <input
                                 type="text"
-                                className="input-field"
-                                placeholder="Enter room identifier"
+                                className="form-input"
+                                placeholder="e.g. engineering-team"
                                 value={roomId}
-                                onChange={(e) => setRoomId(e.target.value)}
+                                onChange={(e) => { setRoomId(e.target.value); setError(''); }}
                             />
                         </div>
-                        <div className="input-group">
-                            <label className="input-label">Password</label>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Passcode</label>
                             <input
                                 type="password"
-                                className="input-field"
-                                placeholder="Room password"
+                                className="form-input"
+                                placeholder="Room secret passcode"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                                onKeyDown={(e) => e.key === 'Enter' && handleJoin(false)}
                             />
                         </div>
                     </div>
                 )}
 
-                {error && <div style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
-
-                {mode === 'public' ? (
-                    <button className="btn-primary" onClick={() => handleJoin(false)}>
-                        Join Public Chat
-                    </button>
-                ) : (
-                    <>
-                        <button className="btn-primary" onClick={() => handleJoin(false)}>
-                            Join Room
-                        </button>
-                        <button className="btn-secondary" onClick={() => handleJoin(true)}>
-                            Create New Room
-                        </button>
-                    </>
+                {error && (
+                    <div className="form-error">
+                        <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                        <span>{error}</span>
+                    </div>
                 )}
+
+                <div style={{ marginTop: '1.25rem' }}>
+                    {mode === 'public' ? (
+                        <button
+                            type="button"
+                            className="btn-primary"
+                            onClick={() => handleJoin(false)}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? 'Entering Workspace...' : 'Enter Public Workspace'} <ArrowRight size={16} />
+                        </button>
+                    ) : (
+                        <>
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={() => handleJoin(false)}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? 'Joining Room...' : 'Join Existing Room'} <ArrowRight size={16} />
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => handleJoin(true)}
+                                disabled={isSubmitting}
+                            >
+                                <ShieldCheck size={16} /> Create New Private Room
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

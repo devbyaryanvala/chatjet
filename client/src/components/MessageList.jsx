@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import MessageItem from './MessageItem';
 import Poll from './Poll';
+import ChatJetIcon from '../assets/ChatJetIcon.png';
 
 export default function MessageList({ messages, userName, socket, onDeleteMessage }) {
     const endRef = useRef(null);
@@ -17,8 +18,11 @@ export default function MessageList({ messages, userName, socket, onDeleteMessag
         return (
             <div className="messages-container">
                 <div className="empty-state" id="emptyState">
-                    <div className="empty-icon">💬</div>
-                    <div className="empty-text">No messages yet. Say hello!</div>
+                    <div className="empty-state-icon">
+                        <img src={ChatJetIcon} alt="ChatJet" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                    </div>
+                    <div className="empty-state-text">Welcome to the workspace</div>
+                    <div className="empty-state-sub">Start the conversation by sending a message or snippet.</div>
                 </div>
             </div>
         );

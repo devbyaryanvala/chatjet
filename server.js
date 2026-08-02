@@ -20,16 +20,23 @@ const log = {
 
 
 const userColors = {};
+const userAvatars = {};
 const polls = {}; // Global poll store
 const userNames = {};
 const activeRooms = {}; // { roomId: { password: '...', users: [] } }
 const userRooms = {}; // { socketId: roomId }
+
+function getAvatarUrl(name, seed) {
+    const avatarSeed = encodeURIComponent((name || seed || 'user').trim());
+    return `https://api.dicebear.com/7.x/thumbs/svg?seed=${avatarSeed}&radius=50&backgroundColor=1e293b,0f172a,1e1b4b,172554,18181b,1e3a8a,14532d,701a75`;
+}
 
 io.on('connection', (socket) => {
     log.info(`User connected: ${socket.id}`);
 
     const color = getRandomColor();
     userColors[socket.id] = color;
+    userAvatars[socket.id] = getAvatarUrl('', socket.id);
     socket.emit('color', color);
 
     socket.on('disconnect', () => {
@@ -45,6 +52,7 @@ io.on('connection', (socket) => {
             }
         }
         delete userColors[socket.id];
+        delete userAvatars[socket.id];
         delete userNames[socket.id];
         delete userRooms[socket.id];
     });
@@ -81,9 +89,25 @@ io.on('connection', (socket) => {
         log.info(`Cleaned up polls for room ${roomId}`);
     }
 
+    // Helper to check if a username is already taken by another active user in a room
+    function isNameTakenInRoom(name, roomId, currentSocketId) {
+        if (!name || !roomId) return false;
+        const normalized = name.trim().toLowerCase();
+        for (const [sId, rId] of Object.entries(userRooms)) {
+            if (rId === roomId && sId !== currentSocketId) {
+                const existingName = (userNames[sId] || '').trim().toLowerCase();
+                if (existingName === normalized) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     socket.on('create room', ({ name, roomId, password }) => {
+        const trimmedName = (name || '').trim();
         // Validation
-        if (!name || name.length > 30 || name.length < 2) {
+        if (!trimmedName || trimmedName.length > 30 || trimmedName.length < 2) {
             socket.emit('error', 'Name must be between 2 and 30 characters.');
             return;
         }
@@ -112,19 +136,26 @@ io.on('connection', (socket) => {
             users: [socket.id]
         };
 
-        userNames[socket.id] = name;
+        userNames[socket.id] = trimmedName;
+        userAvatars[socket.id] = getAvatarUrl(trimmedName, socket.id);
         userRooms[socket.id] = roomId;
         socket.join(roomId);
 
-        log.success(`User ${name} created room: ${roomId}`);
+        log.success(`User ${trimmedName} created room: ${roomId}`);
         socket.emit('room joined', { roomId, isCreator: true });
 
         // Notify room
-        io.to(roomId).emit('system message', `${name} created the room.`);
+        io.to(roomId).emit('system message', `${trimmedName} created the room.`);
         broadcastUserList(roomId);
     });
 
     socket.on('join room', ({ name, roomId, password }) => {
+        const trimmedName = (name || '').trim();
+        if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 30) {
+            socket.emit('error', 'Name must be between 2 and 30 characters.');
+            return;
+        }
+
         if (!activeRooms[roomId]) {
             socket.emit('error', 'Room does not exist');
             return;
@@ -135,33 +166,52 @@ io.on('connection', (socket) => {
             return;
         }
 
+        if (isNameTakenInRoom(trimmedName, roomId, socket.id)) {
+            socket.emit('error', `The name "${trimmedName}" is already taken in this room. Please choose a different name.`);
+            return;
+        }
+
         leavePreviousRoom(socket); // Leave old room first
 
         activeRooms[roomId].users.push(socket.id);
-        userNames[socket.id] = name;
+        userNames[socket.id] = trimmedName;
+        userAvatars[socket.id] = getAvatarUrl(trimmedName, socket.id);
         userRooms[socket.id] = roomId;
         socket.join(roomId);
 
-        log.success(`User ${name} joined room: ${roomId}`);
+        log.success(`User ${trimmedName} joined room: ${roomId}`);
         socket.emit('room joined', { roomId, isCreator: false });
 
         // Notify others in room
-        socket.to(roomId).emit('system message', `${name} joined the room.`);
+        socket.to(roomId).emit('system message', `${trimmedName} joined the room.`);
         broadcastUserList(roomId);
     });
 
     socket.on('join public', ({ name }) => {
-        leavePreviousRoom(socket); // Leave old room first
+        const trimmedName = (name || '').trim();
+        if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 30) {
+            socket.emit('error', 'Display name must be between 2 and 30 characters.');
+            return;
+        }
 
         const roomId = 'Public';
-        userNames[socket.id] = name;
+
+        if (isNameTakenInRoom(trimmedName, roomId, socket.id)) {
+            socket.emit('error', `The name "${trimmedName}" is already taken in Public Chat. Please choose a different name.`);
+            return;
+        }
+
+        leavePreviousRoom(socket); // Leave old room first
+
+        userNames[socket.id] = trimmedName;
+        userAvatars[socket.id] = getAvatarUrl(trimmedName, socket.id);
         userRooms[socket.id] = roomId;
         socket.join(roomId);
 
-        log.success(`User ${name} joined Public Chat`);
+        log.success(`User ${trimmedName} joined Public Chat`);
         socket.emit('room joined', { roomId, isCreator: false });
 
-        socket.to(roomId).emit('system message', `${name} joined Public Chat.`);
+        socket.to(roomId).emit('system message', `${trimmedName} joined Public Chat.`);
 
         // Broadcast user list
         broadcastUserList(roomId);
@@ -201,7 +251,8 @@ io.on('connection', (socket) => {
             const users = sockets.map(s => ({
                 id: s.id,
                 name: userNames[s.id] || 'Unknown',
-                color: userColors[s.id]
+                color: userColors[s.id],
+                avatar: userAvatars[s.id] || getAvatarUrl(userNames[s.id], s.id)
             }));
             // log.info(`Broadcasting ${users.length} users to room ${roomId}`);
             io.to(roomId).emit('room users', users);
@@ -324,12 +375,20 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Legacy support or fallback? userNames mainly set in join/create now.
+    // Update or set name with uniqueness check
     socket.on('set name', (name) => {
-        userNames[socket.id] = name;
-        log.info(`User ${socket.id} set name: ${name}`);
-        // Optionally update user list if they are in a room
+        const trimmedName = (name || '').trim();
+        if (!trimmedName || trimmedName.length < 2 || trimmedName.length > 30) {
+            socket.emit('error', 'Display name must be between 2 and 30 characters.');
+            return;
+        }
         const roomId = userRooms[socket.id];
+        if (roomId && isNameTakenInRoom(trimmedName, roomId, socket.id)) {
+            socket.emit('error', `The name "${trimmedName}" is already taken in this room.`);
+            return;
+        }
+        userNames[socket.id] = trimmedName;
+        log.info(`User ${socket.id} set name: ${trimmedName}`);
         if (roomId) broadcastUserList(roomId);
     });
 
@@ -372,6 +431,7 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('chat message', {
             id: msgId,
             name: userName,
+            avatar: userAvatars[userId] || getAvatarUrl(userName, userId),
             text: finalMsg,
             attachment: attachment,
             color: userColor,
