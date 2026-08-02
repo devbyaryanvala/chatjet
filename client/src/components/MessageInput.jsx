@@ -129,7 +129,8 @@ export default function MessageInput({ socket, currentRoom, userName, onSendMess
 
         // Wrap in code block if code mode is active
         if (codeMode && text.trim()) {
-            finalText = `\`\`\`${codeLanguage}\n${text}\n\`\`\``;
+            const lang = (codeLanguage && codeLanguage !== 'null') ? codeLanguage : (detectLanguage(text) || '');
+            finalText = `\`\`\`${lang}\n${text}\n\`\`\``;
         }
 
         // Let parent handle slash commands or just emitting
@@ -138,6 +139,7 @@ export default function MessageInput({ socket, currentRoom, userName, onSendMess
         setText('');
         setAttachment(null);
         setCodeMode(false);
+        setCodeLanguage(null);
         setIsTyping(false);
         socket.emit('stop typing');
 
@@ -145,8 +147,13 @@ export default function MessageInput({ socket, currentRoom, userName, onSendMess
     };
 
     const toggleCodeMode = () => {
-        setCodeMode(!codeMode);
-        setCodeLanguage(null); // Reset detected language when toggling
+        const nextMode = !codeMode;
+        setCodeMode(nextMode);
+        if (nextMode && text.trim()) {
+            setCodeLanguage(detectLanguage(text));
+        } else {
+            setCodeLanguage(null);
+        }
         if (textareaRef.current) textareaRef.current.focus();
     };
 
@@ -154,17 +161,54 @@ export default function MessageInput({ socket, currentRoom, userName, onSendMess
         const file = e.target.files[0];
         if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) {
-            alert('File is too large. Max size is 5MB.');
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File is too large. Max size is 10MB.');
             return;
         }
+
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const mimeMap = {
+            c: 'text/x-c',
+            cpp: 'text/x-c++src',
+            cc: 'text/x-c++src',
+            cxx: 'text/x-c++src',
+            h: 'text/x-chdr',
+            hpp: 'text/x-c++hdr',
+            cs: 'text/x-csharp',
+            java: 'text/x-java',
+            py: 'text/x-python',
+            js: 'text/javascript',
+            jsx: 'text/javascript',
+            ts: 'text/typescript',
+            tsx: 'text/typescript',
+            json: 'application/json',
+            html: 'text/html',
+            htm: 'text/html',
+            css: 'text/css',
+            md: 'text/markdown',
+            txt: 'text/plain',
+            sql: 'text/x-sql',
+            sh: 'application/x-sh',
+            bash: 'application/x-sh',
+            rs: 'text/x-rust',
+            go: 'text/x-go',
+            php: 'text/x-php',
+            rb: 'text/x-ruby',
+            swift: 'text/x-swift',
+            kt: 'text/x-kotlin',
+            pdf: 'application/pdf',
+            zip: 'application/zip'
+        };
+
+        const resolvedType = file.type || mimeMap[ext] || 'application/octet-stream';
 
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onloadend = () => {
             setAttachment({
                 name: file.name,
-                type: file.type,
+                type: resolvedType,
+                size: file.size,
                 data: reader.result
             });
         };

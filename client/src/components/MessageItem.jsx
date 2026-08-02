@@ -1,19 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { marked } from 'marked';
 import Prism from 'prismjs';
-import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
 import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-markup-templating';
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-ruby';
+import 'prismjs/components/prism-swift';
+import 'prismjs/components/prism-kotlin';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-css';
 import DOMPurify from 'dompurify';
 
 export default function MessageItem({ message, isOwn, onDelete }) {
     const contentRef = useRef(null);
-    const [copiedId, setCopiedId] = useState(null);
     const [isExpired, setIsExpired] = useState(false);
     const [countdown, setCountdown] = useState(null);
 
@@ -49,9 +62,12 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                 const code = pre.querySelector('code');
                 if (!code) return;
 
-                // Detect language from class (e.g., "language-javascript")
+                // Detect language from class (e.g., "language-c" or "language-javascript")
                 const langClass = Array.from(code.classList).find(c => c.startsWith('language-'));
-                const language = langClass ? langClass.replace('language-', '') : 'code';
+                let language = langClass ? langClass.replace('language-', '') : '';
+                if (!language || language === 'null' || language === 'undefined') {
+                    language = 'CODE';
+                }
 
                 // Create wrapper
                 const wrapper = document.createElement('div');
@@ -78,10 +94,11 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                 copyBtn.addEventListener('click', () => {
                     const codeText = code.textContent;
                     navigator.clipboard.writeText(codeText).then(() => {
-                        copyBtn.querySelector('.copy-text').textContent = 'Copied!';
+                        const copyTextEl = copyBtn.querySelector('.copy-text');
+                        if (copyTextEl) copyTextEl.textContent = 'Copied!';
                         copyBtn.classList.add('copied');
                         setTimeout(() => {
-                            copyBtn.querySelector('.copy-text').textContent = 'Copy';
+                            if (copyTextEl) copyTextEl.textContent = 'Copy';
                             copyBtn.classList.remove('copied');
                         }, 2000);
                     });
@@ -106,25 +123,75 @@ export default function MessageItem({ message, isOwn, onDelete }) {
     // Avatar generator
     const avatarContent = message.name ? message.name.substring(0, 2).toUpperCase() : '??';
 
-    // Escape HTML entities to prevent rendering raw HTML
-    const escapeHtml = (text) => {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, (char) => map[char]);
-    };
-
-    // Parse Markdown safely
+    // Parse Markdown safely without double-escaping entities
     const getRenderedContent = () => {
         if (!message.text) return { __html: '' };
-        const escapedText = escapeHtml(message.text);
-        const rawMarkup = marked.parse(escapedText);
+        const rawMarkup = marked.parse(message.text, { breaks: true, gfm: true });
         return { __html: DOMPurify.sanitize(rawMarkup) };
     };
+
+    // Robust file download handler converting data-URI / base64 to Blob
+    const handleDownload = (e, attachment) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            if (!attachment || !attachment.data) return;
+
+            if (attachment.data.startsWith('data:')) {
+                const parts = attachment.data.split(',');
+                const mimeMatch = parts[0].match(/:(.*?);/);
+                const mime = mimeMatch ? mimeMatch[1] : (attachment.type || 'application/octet-stream');
+                const byteCharacters = atob(parts[1]);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: mime });
+                const blobUrl = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = attachment.name || 'download';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+            } else {
+                const link = document.createElement('a');
+                link.href = attachment.data;
+                link.download = attachment.name || 'download';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        } catch (err) {
+            console.error('Download failed, using fallback:', err);
+            const link = document.createElement('a');
+            link.href = attachment.data;
+            link.download = attachment.name || 'download';
+            link.target = '_blank';
+            link.click();
+        }
+    };
+
+    const formatFileSize = (bytes) => {
+        if (!bytes || isNaN(bytes)) return '';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const getFileExt = (filename) => {
+        if (!filename) return 'FILE';
+        const ext = filename.split('.').pop();
+        return ext ? ext.toUpperCase() : 'FILE';
+    };
+
+    const isImageAttachment = message.attachment && (
+        (message.attachment.type || '').startsWith('image/') ||
+        /\.(png|jpe?g|gif|webp|svg)$/i.test(message.attachment.name || '')
+    );
 
     return (
         <div className={`message ${isOwn ? 'own' : ''}`} id={`msg-${message.id}`}>
@@ -158,10 +225,10 @@ export default function MessageItem({ message, isOwn, onDelete }) {
             </div>
 
             <div className="message-content" ref={contentRef}>
-                <div dangerouslySetInnerHTML={getRenderedContent()} />
+                {message.text && <div dangerouslySetInnerHTML={getRenderedContent()} />}
 
                 {message.attachment && (
-                    message.attachment.type.startsWith('image/') ? (
+                    isImageAttachment ? (
                         <img
                             src={message.attachment.data}
                             alt={message.attachment.name}
@@ -169,12 +236,35 @@ export default function MessageItem({ message, isOwn, onDelete }) {
                         />
                     ) : (
                         <div className="file-attachment-card">
-                            <div className="file-icon">📄</div>
-                            <div className="file-info">
-                                <div className="file-name">{message.attachment.name}</div>
-                                <div className="file-type">Attachment</div>
+                            <div className="file-icon" style={{
+                                width: '38px',
+                                height: '38px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(0, 212, 255, 0.15)',
+                                border: '1px solid rgba(0, 212, 255, 0.3)',
+                                borderRadius: '8px',
+                                color: 'var(--accent-primary)',
+                                fontWeight: 700,
+                                fontSize: '0.75rem'
+                            }}>
+                                {getFileExt(message.attachment.name).slice(0, 4)}
                             </div>
-                            <a href={message.attachment.data} download={message.attachment.name} className="btn-download">Download</a>
+                            <div className="file-info">
+                                <div className="file-name" title={message.attachment.name}>{message.attachment.name}</div>
+                                <div className="file-type">
+                                    {formatFileSize(message.attachment.size) || 'Attachment'}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={(e) => handleDownload(e, message.attachment)}
+                                className="btn-download"
+                                style={{ cursor: 'pointer', border: '1px solid var(--border-active)' }}
+                            >
+                                Download
+                            </button>
                         </div>
                     )
                 )}

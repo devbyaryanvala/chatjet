@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: { origin: "*" },
-    maxHttpBufferSize: 5e6 // 5 MB for file uploads
+    maxHttpBufferSize: 20e6 // 20 MB for file uploads and base64 payloads
 });
 
 // --- Better Logging Helper ---
